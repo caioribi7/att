@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>ASSEMBLEIA TABLETOP — ATT</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div id="stage"></div>
+
+  <aside id="sidebar" class="panel">
+    <header class="brand">
+      <div class="logo">ATT</div>
+      <div class="sub">Assembleia Tabletop</div>
+    </header>
+
+    <section class="tools">
+      <button class="tool active" data-tool="select" title="Selecionar (V)"><span>◱</span>Selecionar</button>
+      <button class="tool" data-tool="pan" title="Mover câmera (Espaço)"><span>✥</span>Mover</button>
+      <button class="tool" data-tool="token" title="Adicionar token (T)"><span>●</span>Token</button>
+      <button class="tool" data-tool="wall" title="Desenhar parede (W)"><span>▭</span>Parede</button>
+      <button class="tool" data-tool="door" title="Adicionar porta (D)"><span>⫷⫸</span>Porta</button>
+      <button class="tool" data-tool="light" title="Adicionar luz (G)"><span>✺</span>Luz</button>
+      <button class="tool" data-tool="reveal" title="Pintar revelar (R)"><span>◌</span>Revelar</button>
+      <button class="tool" data-tool="hide" title="Pintar esconder (H)"><span>●</span>Esconder</button>
+    </section>
+
+    <section class="block">
+      <h3>Mapa</h3>
+      <label class="file-input">
+        <input id="map-file" type="file" accept="image/*" hidden />
+        <span>Importar imagem do mapa</span>
+      </label>
+      <div class="row">
+        <label>Grid (px)</label>
+        <input id="grid-size" type="number" min="8" max="512" step="1" value="70" />
+      </div>
+      <div class="row">
+        <label>Mostrar grid</label>
+        <input id="grid-show" type="checkbox" checked />
+      </div>
+      <div class="row">
+        <label>Snap</label>
+        <input id="grid-snap" type="checkbox" checked />
+      </div>
+      <div class="row">
+        <label>Cor do grid</label>
+        <input id="grid-color" type="color" value="#000000" />
+      </div>
+      <div class="row">
+        <label>Opacidade</label>
+        <input id="grid-alpha" type="range" min="0" max="100" value="35" />
+      </div>
+    </section>
+
+    <section class="block">
+      <h3>Visão</h3>
+      <div class="row">
+        <label>Modo</label>
+        <select id="view-mode">
+          <option value="gm">Mestre (vê tudo)</option>
+          <option value="player">Jogador (com fog)</option>
+        </select>
+      </div>
+      <div class="row">
+        <label>Sombra global</label>
+        <input id="global-darkness" type="range" min="0" max="100" value="100" />
+      </div>
+      <button id="fog-clear-reveal" class="btn ghost">Limpar revelações</button>
+      <button id="fog-reveal-all" class="btn ghost">Revelar tudo</button>
+    </section>
+
+    <section class="block">
+      <h3>Cinematics</h3>
+      <label class="file-input">
+        <input id="cine-file" type="file" accept="video/*" multiple hidden />
+        <span>Importar vídeos</span>
+      </label>
+      <ol id="cine-list" class="cine-list"></ol>
+      <p class="hint">Atalho: <kbd>Ctrl</kbd>+<kbd>1..9</kbd> dispara o vídeo. <kbd>Esc</kbd> fecha.</p>
+    </section>
+
+    <section class="block">
+      <h3>Atalhos</h3>
+      <ul class="kbd-list">
+        <li><kbd>V</kbd> Selecionar · <kbd>Espaço</kbd> mover</li>
+        <li><kbd>T</kbd> Token · <kbd>W</kbd> Parede · <kbd>D</kbd> Porta · <kbd>G</kbd> Luz</li>
+        <li><kbd>R</kbd>/<kbd>H</kbd> Revelar/Esconder fog</li>
+        <li><kbd>F</kbd> Lanterna no token selecionado</li>
+        <li><kbd>L</kbd> Alternar Mestre/Jogador</li>
+        <li><kbd>Del</kbd> Apaga seleção · <kbd>Esc</kbd> finaliza</li>
+        <li>Roda do mouse: zoom · Botão do meio: arrastar</li>
+      </ul>
+    </section>
+  </aside>
+
+  <div id="topbar">
+    <div id="status">Pronto.</div>
+    <div id="coord">0, 0</div>
+  </div>
+
+  <!-- Modal de edição de token -->
+  <div id="token-modal" class="modal hidden">
+    <div class="modal-card">
+      <header>
+        <h3>Editar token</h3>
+        <button class="x" data-close>×</button>
+      </header>
+      <div class="row">
+        <label>Nome</label>
+        <input id="t-name" type="text" />
+      </div>
+      <div class="row">
+        <label>Imagem</label>
+        <input id="t-image" type="file" accept="image/*" />
+      </div>
+      <div class="row">
+        <label>Tamanho (cells)</label>
+        <input id="t-size" type="number" min="0.5" step="0.5" value="1" />
+      </div>
+      <div class="row">
+        <label>Cor da borda</label>
+        <input id="t-border" type="color" value="#22d3ee" />
+      </div>
+      <div class="row">
+        <label>Lanterna</label>
+        <input id="t-flashlight" type="checkbox" />
+      </div>
+      <div class="row">
+        <label>Raio (cells)</label>
+        <input id="t-flashradius" type="number" min="1" step="1" value="6" />
+      </div>
+      <h4>Barras de status</h4>
+      <div id="t-bars" class="bars-editor"></div>
+      <button id="t-add-bar" class="btn ghost">+ Adicionar barra</button>
+      <footer>
+        <button id="t-delete" class="btn danger">Apagar</button>
+        <button id="t-save" class="btn primary">Salvar</button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- Cinematic overlay -->
+  <div id="cine-overlay" class="cine-overlay hidden">
+    <video id="cine-video" controls></video>
+    <button id="cine-close" class="cine-close">Fechar (Esc)</button>
+  </div>
+
+  <!-- PixiJS via CDN (oficial) -->
+  <script src="https://pixijs.download/v7.4.2/pixi.min.js"></script>
+
+  <!-- Núcleo (ordem importa: cada arquivo registra em window.ATT) -->
+  <script src="js/state.js"></script>
+  <script src="js/util.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/grid.js"></script>
+  <script src="js/walls.js"></script>
+  <script src="js/lights.js"></script>
+  <script src="js/fog.js"></script>
+  <script src="js/tokens.js"></script>
+  <script src="js/selection.js"></script>
+  <script src="js/tools.js"></script>
+  <script src="js/cinematics.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/shortcuts.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
