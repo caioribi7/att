@@ -62,6 +62,47 @@ ATT.app = {
     return { x: (sx - w.x) / w.scale.x, y: (sy - w.y) / w.scale.y };
   },
 
+  // Tween de câmera para um ponto em coords do mundo (centraliza)
+  tweenTo(wx, wy, opts = {}){
+    const stage = document.getElementById('stage');
+    const targetScale = opts.scale ?? this.world.scale.x;
+    const targetX = stage.clientWidth / 2 - wx * targetScale;
+    const targetY = stage.clientHeight / 2 - wy * targetScale;
+    this._tween(targetX, targetY, targetScale, opts.duration ?? 360);
+  },
+
+  zoomBy(factor, cx, cy){
+    const w = this.world;
+    const r = this.pixi.view.getBoundingClientRect();
+    const mx = cx ?? (r.width / 2);
+    const my = cy ?? (r.height / 2);
+    const before = this.screenToWorld(mx, my);
+    const newScale = ATT.util.clamp(w.scale.x * factor, 0.05, 8);
+    const targetX = mx - before.x * newScale;
+    const targetY = my - before.y * newScale;
+    this._tween(targetX, targetY, newScale, 180);
+  },
+
+  _tween(tx, ty, ts, duration){
+    if (this._raf) cancelAnimationFrame(this._raf);
+    const w = this.world;
+    const sx = w.x, sy = w.y, ss = w.scale.x;
+    const t0 = performance.now();
+    const ease = (t) => 1 - Math.pow(1 - t, 3);
+    const step = (now) => {
+      const k = ATT.util.clamp((now - t0) / duration, 0, 1);
+      const e = ease(k);
+      w.x = sx + (tx - sx) * e;
+      w.y = sy + (ty - sy) * e;
+      const s = ss + (ts - ss) * e;
+      w.scale.set(s);
+      ATT.state.camera = { x: w.x, y: w.y, scale: s };
+      ATT.emit('camera:changed');
+      if (k < 1) this._raf = requestAnimationFrame(step);
+    };
+    this._raf = requestAnimationFrame(step);
+  },
+
   setupCamera(){
     const view = this.pixi.view;
     const w = this.world;

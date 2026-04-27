@@ -103,7 +103,8 @@ ATT.fog = {
     const cellPx = ATT.state.grid.size;
 
     for (const l of ATT.state.lights){
-      const poly = ATT.lights.visibilityPolygon(l.x, l.y, l.radius);
+      const r = (l.animate && l._flickerR) ? l._flickerR : l.radius;
+      const poly = ATT.lights.visibilityPolygon(l.x, l.y, r);
       if (poly.length >= 6) visG.drawPolygon(poly.map((v, i) => i % 2 === 0 ? v * this.rtScale : v * this.rtScale));
     }
     for (const t of ATT.state.tokens){

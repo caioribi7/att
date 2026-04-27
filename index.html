@@ -4,101 +4,233 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>ASSEMBLEIA TABLETOP — ATT</title>
+  <link rel="preconnect" href="https://rsms.me/" />
+  <link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
-  <div id="stage"></div>
+  <!-- Top bar -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark"></div>
+      <div>
+        <div class="brand-name">Assembleia</div>
+        <div class="brand-sub">Tabletop · ATT</div>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn ghost sm" id="scene-export" title="Baixa um JSON com a cena">Exportar</button>
+      <button class="btn ghost sm" id="scene-import">Importar</button>
+      <input id="scene-import-file" type="file" accept="application/json" hidden />
+      <button class="btn primary sm" id="view-toggle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/></svg>
+        <span id="view-toggle-label">Modo Mestre</span>
+      </button>
+    </div>
+  </header>
 
-  <aside id="sidebar" class="panel">
-    <header class="brand">
-      <div class="logo">ATT</div>
-      <div class="sub">Assembleia Tabletop</div>
-    </header>
+  <!-- Tool rail -->
+  <aside class="tools" role="toolbar" aria-label="Ferramentas">
+    <button class="tool active" data-tool="select" data-label="Selecionar (V)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3l14 9-6 1-3 7z"/></svg>
+    </button>
+    <button class="tool" data-tool="pan" data-label="Mover câmera (Espaço)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11V5a2 2 0 1 1 4 0v6"/><path d="M13 11V4a2 2 0 1 1 4 0v9"/><path d="M17 12V7a2 2 0 1 1 4 0v9a6 6 0 0 1-6 6h-2c-2 0-4-1-5-3l-4-7c-1-2 2-4 4-1l1 2"/></svg>
+    </button>
+    <div class="divider"></div>
+    <button class="tool" data-tool="token" data-label="Adicionar token (T)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>
+    </button>
+    <button class="tool" data-tool="wall" data-label="Parede (W)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M4 20L20 4"/></svg>
+    </button>
+    <button class="tool" data-tool="door" data-label="Porta (D)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="3" width="12" height="18" rx="1"/><circle cx="15" cy="12" r="1" fill="currentColor"/></svg>
+    </button>
+    <button class="tool" data-tool="light" data-label="Luz (G)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+    </button>
+    <div class="divider"></div>
+    <button class="tool" data-tool="reveal" data-label="Revelar fog (R)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+    </button>
+    <button class="tool" data-tool="hide" data-label="Esconder fog (H)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10 10 0 0 1 12 19c-7 0-10-7-10-7a18 18 0 0 1 5.07-5.94"/><path d="M9.9 4.24A10 10 0 0 1 12 4c7 0 10 7 10 7a18 18 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><path d="M2 2l20 20"/></svg>
+    </button>
+  </aside>
 
-    <section class="tools">
-      <button class="tool active" data-tool="select" title="Selecionar (V)"><span>◱</span>Selecionar</button>
-      <button class="tool" data-tool="pan" title="Mover câmera (Espaço)"><span>✥</span>Mover</button>
-      <button class="tool" data-tool="token" title="Adicionar token (T)"><span>●</span>Token</button>
-      <button class="tool" data-tool="wall" title="Desenhar parede (W)"><span>▭</span>Parede</button>
-      <button class="tool" data-tool="door" title="Adicionar porta (D)"><span>⫷⫸</span>Porta</button>
-      <button class="tool" data-tool="light" title="Adicionar luz (G)"><span>✺</span>Luz</button>
-      <button class="tool" data-tool="reveal" title="Pintar revelar (R)"><span>◌</span>Revelar</button>
-      <button class="tool" data-tool="hide" title="Pintar esconder (H)"><span>●</span>Esconder</button>
+  <!-- Stage -->
+  <main id="stage"></main>
+
+  <!-- Canvas overlays -->
+  <div class="status-pill" id="status">Pronto.</div>
+  <div class="fab-group fab-bl">
+    <div class="coord-pill" id="coord">0, 0</div>
+  </div>
+  <div class="fab-group fab-br">
+    <button class="fab" id="zoom-out" title="Diminuir zoom">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4M8 11h6"/></svg>
+    </button>
+    <button class="fab" id="zoom-in" title="Aumentar zoom">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4M11 8v6M8 11h6"/></svg>
+    </button>
+    <button class="fab" id="zoom-fit" title="Centralizar mapa">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8V5a2 2 0 0 1 2-2h3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M21 16v3a2 2 0 0 1-2 2h-3"/></svg>
+    </button>
+  </div>
+
+  <!-- Painel direito -->
+  <aside class="panel">
+    <nav class="tabs">
+      <button class="tab active" data-tab="scene">Cena</button>
+      <button class="tab" data-tab="tokens">Tokens<span class="badge" id="token-count">0</span></button>
+      <button class="tab" data-tab="library">Acervo</button>
+      <button class="tab" data-tab="media">Mídia<span class="badge" id="media-count">0</span></button>
+      <button class="tab" data-tab="help">Atalhos</button>
+    </nav>
+
+    <!-- TAB CENA -->
+    <section id="tab-scene" class="tab-panel active">
+      <div class="section">
+        <h3>Mapa</h3>
+        <label class="file-input">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+          <input id="map-file" type="file" accept="image/*" hidden />
+          <span>Importar imagem do mapa</span>
+        </label>
+      </div>
+
+      <div class="section">
+        <h3>Grid</h3>
+        <div class="row"><label>Tamanho (px)</label><input id="grid-size" type="number" min="8" max="512" step="1" value="70"></div>
+        <div class="row"><label>Mostrar grid</label><input id="grid-show" type="checkbox" checked></div>
+        <div class="row"><label>Snap em cells</label><input id="grid-snap" type="checkbox" checked></div>
+        <div class="row"><label>Cor</label><input id="grid-color" type="color" value="#0f2447"></div>
+        <div class="row"><label>Opacidade</label><input id="grid-alpha" type="range" min="0" max="100" value="25"></div>
+      </div>
+
+      <div class="section">
+        <h3>Visão & Fog</h3>
+        <div class="row"><label>Modo</label>
+          <select id="view-mode">
+            <option value="gm">Mestre (vê tudo)</option>
+            <option value="player">Jogador (com fog)</option>
+          </select>
+        </div>
+        <div class="row"><label>Sombra global</label><input id="global-darkness" type="range" min="0" max="100" value="100"></div>
+        <button id="fog-clear-reveal" class="btn full" style="margin-top:6px">Limpar revelações</button>
+        <button id="fog-reveal-all" class="btn full" style="margin-top:6px">Revelar tudo</button>
+      </div>
     </section>
 
-    <section class="block">
-      <h3>Mapa</h3>
+    <!-- TAB TOKENS -->
+    <section id="tab-tokens" class="tab-panel">
+      <div class="panel-header">
+        <h2>Tokens</h2>
+        <button id="t-new" class="btn primary sm">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+          Novo
+        </button>
+      </div>
+      <div class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+        <input id="t-search" type="search" placeholder="Buscar tokens..." />
+      </div>
+      <div id="tokens-list" class="tokens-list"></div>
+    </section>
+
+    <!-- TAB ACERVO -->
+    <section id="tab-library" class="tab-panel">
+      <div class="panel-header">
+        <h2>Acervo</h2>
+      </div>
+      <nav class="subtabs" id="lib-tabs">
+        <button class="subtab active" data-lib="maps">Mapas</button>
+        <button class="subtab" data-lib="tokens">Tokens</button>
+        <button class="subtab" data-lib="scenes">Cenas</button>
+      </nav>
+
+      <div class="lib-pane" data-lib-pane="maps">
+        <label class="file-input">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+          <input id="lib-map-file" type="file" accept="image/*" multiple hidden />
+          <span>Salvar mapas no acervo</span>
+        </label>
+        <div id="lib-maps" class="lib-grid"></div>
+      </div>
+
+      <div class="lib-pane" data-lib-pane="tokens" hidden>
+        <label class="file-input">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+          <input id="lib-token-file" type="file" accept="image/*" multiple hidden />
+          <span>Salvar tokens no acervo</span>
+        </label>
+        <div id="lib-tokens" class="lib-grid"></div>
+        <p class="hint">Clique num token do acervo para inserir no centro da tela. Botão direito apaga.</p>
+      </div>
+
+      <div class="lib-pane" data-lib-pane="scenes" hidden>
+        <button id="lib-save-scene" class="btn primary full">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          Salvar cena atual
+        </button>
+        <div id="lib-scenes" class="lib-list" style="margin-top:10px"></div>
+        <p class="hint">Cenas salvam tudo: mapa, tokens, paredes, portas, luzes e revelações.</p>
+      </div>
+    </section>
+
+    <!-- TAB MIDIA -->
+    <section id="tab-media" class="tab-panel">
+      <div class="panel-header">
+        <h2>Cinematics</h2>
+      </div>
       <label class="file-input">
-        <input id="map-file" type="file" accept="image/*" hidden />
-        <span>Importar imagem do mapa</span>
-      </label>
-      <div class="row">
-        <label>Grid (px)</label>
-        <input id="grid-size" type="number" min="8" max="512" step="1" value="70" />
-      </div>
-      <div class="row">
-        <label>Mostrar grid</label>
-        <input id="grid-show" type="checkbox" checked />
-      </div>
-      <div class="row">
-        <label>Snap</label>
-        <input id="grid-snap" type="checkbox" checked />
-      </div>
-      <div class="row">
-        <label>Cor do grid</label>
-        <input id="grid-color" type="color" value="#000000" />
-      </div>
-      <div class="row">
-        <label>Opacidade</label>
-        <input id="grid-alpha" type="range" min="0" max="100" value="35" />
-      </div>
-    </section>
-
-    <section class="block">
-      <h3>Visão</h3>
-      <div class="row">
-        <label>Modo</label>
-        <select id="view-mode">
-          <option value="gm">Mestre (vê tudo)</option>
-          <option value="player">Jogador (com fog)</option>
-        </select>
-      </div>
-      <div class="row">
-        <label>Sombra global</label>
-        <input id="global-darkness" type="range" min="0" max="100" value="100" />
-      </div>
-      <button id="fog-clear-reveal" class="btn ghost">Limpar revelações</button>
-      <button id="fog-reveal-all" class="btn ghost">Revelar tudo</button>
-    </section>
-
-    <section class="block">
-      <h3>Cinematics</h3>
-      <label class="file-input">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
         <input id="cine-file" type="file" accept="video/*" multiple hidden />
         <span>Importar vídeos</span>
       </label>
       <ol id="cine-list" class="cine-list"></ol>
-      <p class="hint">Atalho: <kbd>Ctrl</kbd>+<kbd>1..9</kbd> dispara o vídeo. <kbd>Esc</kbd> fecha.</p>
+      <p class="hint"><strong>Dica:</strong> use <kbd>Ctrl</kbd>+<kbd>1</kbd> a <kbd>9</kbd> para disparar o vídeo correspondente. <kbd>Esc</kbd> fecha.</p>
     </section>
 
-    <section class="block">
-      <h3>Atalhos</h3>
-      <ul class="kbd-list">
-        <li><kbd>V</kbd> Selecionar · <kbd>Espaço</kbd> mover</li>
-        <li><kbd>T</kbd> Token · <kbd>W</kbd> Parede · <kbd>D</kbd> Porta · <kbd>G</kbd> Luz</li>
-        <li><kbd>R</kbd>/<kbd>H</kbd> Revelar/Esconder fog</li>
-        <li><kbd>F</kbd> Lanterna no token selecionado</li>
-        <li><kbd>L</kbd> Alternar Mestre/Jogador</li>
-        <li><kbd>Del</kbd> Apaga seleção · <kbd>Esc</kbd> finaliza</li>
-        <li>Roda do mouse: zoom · Botão do meio: arrastar</li>
-      </ul>
+    <!-- TAB ATALHOS -->
+    <section id="tab-help" class="tab-panel">
+      <div class="section">
+        <h3>Ferramentas</h3>
+        <ul class="kbd-list">
+          <li><strong>Selecionar</strong> <kbd>V</kbd></li>
+          <li><strong>Mover câmera</strong> <kbd>Espaço</kbd></li>
+          <li><strong>Token</strong> <kbd>T</kbd></li>
+          <li><strong>Parede</strong> <kbd>W</kbd></li>
+          <li><strong>Porta</strong> <kbd>D</kbd></li>
+          <li><strong>Luz</strong> <kbd>G</kbd></li>
+          <li><strong>Revelar fog</strong> <kbd>R</kbd></li>
+          <li><strong>Esconder fog</strong> <kbd>H</kbd></li>
+        </ul>
+      </div>
+      <div class="section">
+        <h3>Ações</h3>
+        <ul class="kbd-list">
+          <li><strong>Lanterna no token</strong> <kbd>F</kbd></li>
+          <li><strong>Alternar Mestre/Jogador</strong> <kbd>L</kbd></li>
+          <li><strong>Apagar seleção</strong> <kbd>Del</kbd></li>
+          <li><strong>Cancelar / fechar</strong> <kbd>Esc</kbd></li>
+          <li><strong>Cinematic 1–9</strong> <kbd>Ctrl</kbd>+<kbd>1</kbd>..<kbd>9</kbd></li>
+        </ul>
+      </div>
+      <div class="section">
+        <h3>Mouse</h3>
+        <ul class="kbd-list">
+          <li><strong>Zoom</strong> Roda</li>
+          <li><strong>Pan</strong> Botão do meio</li>
+          <li><strong>Adicionar à seleção</strong> Shift+clique</li>
+          <li><strong>Caixa de seleção</strong> Drag em área vazia</li>
+          <li><strong>Editar token</strong> Botão direito</li>
+          <li><strong>Apagar parede/luz</strong> Botão direito</li>
+        </ul>
+      </div>
     </section>
   </aside>
-
-  <div id="topbar">
-    <div id="status">Pronto.</div>
-    <div id="coord">0, 0</div>
-  </div>
 
   <!-- Modal de edição de token -->
   <div id="token-modal" class="modal hidden">
@@ -107,36 +239,42 @@
         <h3>Editar token</h3>
         <button class="x" data-close>×</button>
       </header>
-      <div class="row">
-        <label>Nome</label>
-        <input id="t-name" type="text" />
-      </div>
-      <div class="row">
-        <label>Imagem</label>
-        <input id="t-image" type="file" accept="image/*" />
-      </div>
-      <div class="row">
-        <label>Tamanho (cells)</label>
-        <input id="t-size" type="number" min="0.5" step="0.5" value="1" />
-      </div>
-      <div class="row">
-        <label>Cor da borda</label>
-        <input id="t-border" type="color" value="#22d3ee" />
-      </div>
-      <div class="row">
-        <label>Lanterna</label>
-        <input id="t-flashlight" type="checkbox" />
-      </div>
-      <div class="row">
-        <label>Raio (cells)</label>
-        <input id="t-flashradius" type="number" min="1" step="1" value="6" />
-      </div>
+      <div class="row"><label>Nome</label><input id="t-name" type="text" /></div>
+      <div class="row"><label>Imagem</label><input id="t-image" type="file" accept="image/*" /></div>
+      <div class="row"><label>Tamanho (cells)</label><input id="t-size" type="number" min="0.5" step="0.5" value="1" /></div>
+      <div class="row"><label>Cor da borda</label><input id="t-border" type="color" value="#3b82f6" /></div>
+      <div class="row"><label>Lanterna</label><input id="t-flashlight" type="checkbox" /></div>
+      <div class="row"><label>Raio (cells)</label><input id="t-flashradius" type="number" min="1" step="1" value="6" /></div>
       <h4>Barras de status</h4>
       <div id="t-bars" class="bars-editor"></div>
-      <button id="t-add-bar" class="btn ghost">+ Adicionar barra</button>
+      <button id="t-add-bar" class="btn full" style="margin-top:6px">+ Adicionar barra</button>
       <footer>
-        <button id="t-delete" class="btn danger">Apagar</button>
-        <button id="t-save" class="btn primary">Salvar</button>
+        <button id="t-delete" class="btn danger">Apagar token</button>
+        <div style="display:flex; gap:8px">
+          <button id="t-cancel" class="btn ghost" data-close>Cancelar</button>
+          <button id="t-save" class="btn primary">Salvar</button>
+        </div>
+      </footer>
+    </div>
+  </div>
+
+  <!-- Modal de edição de luz -->
+  <div id="light-modal" class="modal hidden">
+    <div class="modal-card" style="width:min(420px, 100%)">
+      <header>
+        <h3>Editar luz</h3>
+        <button class="x" data-close>×</button>
+      </header>
+      <div class="row"><label>Cor</label><input id="l-color" type="color" value="#fff2cc"></div>
+      <div class="row"><label>Raio (px)</label><input id="l-radius" type="number" min="20" step="10" value="360"></div>
+      <div class="row"><label>Intensidade</label><input id="l-intensity" type="range" min="10" max="100" value="100"></div>
+      <div class="row"><label>Animar (flicker)</label><input id="l-animate" type="checkbox"></div>
+      <footer>
+        <button id="l-delete" class="btn danger">Apagar luz</button>
+        <div style="display:flex; gap:8px">
+          <button class="btn ghost" data-close>Cancelar</button>
+          <button id="l-save" class="btn primary">Salvar</button>
+        </div>
       </footer>
     </div>
   </div>
@@ -147,10 +285,13 @@
     <button id="cine-close" class="cine-close">Fechar (Esc)</button>
   </div>
 
-  <!-- PixiJS via CDN (oficial) -->
+  <!-- Input invisível para "Novo Token" com imagem -->
+  <input id="t-new-image" type="file" accept="image/*" hidden />
+
+  <!-- PixiJS via CDN -->
   <script src="https://pixijs.download/v7.4.2/pixi.min.js"></script>
 
-  <!-- Núcleo (ordem importa: cada arquivo registra em window.ATT) -->
+  <!-- Núcleo -->
   <script src="js/state.js"></script>
   <script src="js/util.js"></script>
   <script src="js/app.js"></script>
@@ -162,6 +303,10 @@
   <script src="js/selection.js"></script>
   <script src="js/tools.js"></script>
   <script src="js/cinematics.js"></script>
+  <script src="js/tokens-panel.js"></script>
+  <script src="js/library.js"></script>
+  <script src="js/library-panel.js"></script>
+  <script src="js/scene-io.js"></script>
   <script src="js/ui.js"></script>
   <script src="js/shortcuts.js"></script>
   <script src="js/main.js"></script>

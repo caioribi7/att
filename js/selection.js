@@ -29,14 +29,12 @@ ATT.selection = {
       // Interação com paredes/portas
       if (ATT.walls.handleClick(p, e.button)) return;
 
-      // Remoção de luz por botão direito
-      if (e.button === 2){
-        const i = ATT.state.lights.findIndex(l => Math.hypot(p.x - l.x, p.y - l.y) < 14);
-        if (i >= 0){
-          ATT.state.lights.splice(i, 1);
-          ATT.emit('lights:changed'); ATT.emit('vision:changed');
-          return;
-        }
+      // Luzes: esquerdo edita, direito apaga
+      const light = ATT.lights.findAt(p.x, p.y, 14);
+      if (light){
+        if (e.button === 2){ ATT.lights.remove(light.id); }
+        else { ATT.ui.openLightModal(light.id); }
+        return;
       }
 
       if (e.button !== 0) return; // só botão esquerdo inicia caixa

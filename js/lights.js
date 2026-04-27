@@ -11,13 +11,35 @@ ATT.lights = {
   },
 
   add(x, y, opts = {}){
-    ATT.state.lights.push({
+    const l = {
       id: ATT.nextId(), x, y,
       radius: opts.radius ?? 360,
       color: opts.color ?? 0xfff2cc,
       intensity: opts.intensity ?? 1,
-    });
+      animate: opts.animate ?? false,
+    };
+    ATT.state.lights.push(l);
     ATT.emit('lights:changed'); ATT.emit('vision:changed');
+    return l;
+  },
+
+  get(id){ return ATT.state.lights.find(l => l.id === id); },
+
+  update(id, patch){
+    const l = this.get(id); if (!l) return;
+    Object.assign(l, patch);
+    ATT.emit('lights:changed'); ATT.emit('vision:changed');
+  },
+
+  remove(id){
+    const i = ATT.state.lights.findIndex(l => l.id === id);
+    if (i < 0) return;
+    ATT.state.lights.splice(i, 1);
+    ATT.emit('lights:changed'); ATT.emit('vision:changed');
+  },
+
+  findAt(x, y, r = 14){
+    return ATT.state.lights.find(l => Math.hypot(x - l.x, y - l.y) < r);
   },
 
   redrawMarkers(){

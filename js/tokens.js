@@ -32,6 +32,44 @@ ATT.tokens = {
     return t;
   },
 
+  get(id){ return ATT.state.tokens.find(t => t.id === id); },
+
+  // Atualiza props parciais e re-renderiza
+  update(id, patch){
+    const t = this.get(id); if (!t) return;
+    Object.assign(t, patch);
+    const c = this.byId.get(id); if (c) this._refresh(t, c);
+    ATT.emit('tokens:changed');
+    if (patch.flashlight !== undefined || patch.flashRadius !== undefined || patch.x !== undefined) ATT.emit('vision:changed');
+  },
+
+  // Ajusta uma barra (índice)
+  setBar(id, idx, patch){
+    const t = this.get(id); if (!t || !t.bars[idx]) return;
+    Object.assign(t.bars[idx], patch);
+    const c = this.byId.get(id); if (c) this._refresh(t, c);
+    ATT.emit('tokens:changed');
+  },
+
+  // Centraliza câmera no token (com tween)
+  locate(id){
+    const t = this.get(id); if (!t) return;
+    ATT.app.tweenTo(t.x, t.y);
+    if (!ATT.state.selection.has(id)){ ATT.state.selection.clear(); ATT.state.selection.add(id); ATT.emit('selection:changed'); }
+  },
+
+  // Duplica token (offset 1 cell)
+  duplicate(id){
+    const src = this.get(id); if (!src) return;
+    const cell = ATT.state.grid.size;
+    const copy = {
+      x: src.x + cell, y: src.y, sizeCells: src.sizeCells, name: src.name + ' (cópia)',
+      image: src.image, border: src.border, flashlight: src.flashlight, flashRadius: src.flashRadius,
+      bars: src.bars.map(b => ({ ...b })),
+    };
+    return this.add(copy.x, copy.y, copy);
+  },
+
   remove(id){
     const i = ATT.state.tokens.findIndex(t => t.id === id);
     if (i < 0) return;

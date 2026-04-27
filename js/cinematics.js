@@ -28,6 +28,8 @@ ATT.cinematics = {
 
   renderList(){
     this.list.innerHTML = '';
+    const badge = document.getElementById('media-count');
+    if (badge) badge.textContent = ATT.state.cinematics.length;
     ATT.state.cinematics.forEach((c, i) => {
       const li = document.createElement('li');
       li.innerHTML = `<span class="idx">${i+1}</span><span class="name" title="${c.name}">${c.name}</span>`;

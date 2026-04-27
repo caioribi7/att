@@ -42,7 +42,7 @@ ATT.grid = {
     if (old) ATT.app.layers.map.removeChild(old);
     ATT.app.layers.map.addChild(sprite);
 
-    ATT.state.map = { sprite, width: img.naturalWidth, height: img.naturalHeight };
+    ATT.state.map = { sprite, width: img.naturalWidth, height: img.naturalHeight, dataUrl: img.src };
     ATT.app.centerOnMap();
     ATT.emit('map:changed');
   },
