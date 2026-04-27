@@ -31,6 +31,7 @@ ATT.app = {
     this.layers.walls   = make(20);
     this.layers.lights  = make(30);
     this.layers.tokens  = make(40);
+    this.layers.tokens.sortableChildren = true;
     this.layers.fog     = make(50); // o fog é desenhado por cima do mapa/tokens em modo Player
     this.layers.ui      = make(60); // overlays (caixa de seleção, marcadores)
 

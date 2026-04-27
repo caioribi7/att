@@ -108,10 +108,17 @@ ATT.tokens = {
     const size = cell * t.sizeCells;
     const r = size / 2;
 
+    // sombra sutil
+    const shadow = new PIXI.Graphics();
+    shadow.beginFill(0x000000, 0.18).drawCircle(0, r * 0.18, r * 1.02).endFill();
+    shadow.beginFill(0x000000, 0.10).drawCircle(0, r * 0.32, r * 0.95).endFill();
+    c.addChild(shadow);
+
     // base circular (placeholder se sem imagem)
     const base = new PIXI.Graphics();
     if (!t.image){
-      base.beginFill(0x1f2937, 1).drawCircle(0, 0, r).endFill();
+      base.beginFill(0x1f3b6f, 1).drawCircle(0, 0, r).endFill();
+      base.beginFill(0x60a5fa, 0.25).drawCircle(0, -r * 0.2, r * 0.9).endFill();
     }
     c.addChild(base);
 
@@ -190,19 +197,21 @@ ATT.tokens = {
   },
 
   _wireDrag(c, t){
-    let dragging = false;
-    let dragStart = null; // posição inicial do mundo
-    let initialPositions = null; // map(id -> {x,y}) das selecionadas
+    // Estado por token (closure)
+    let down = false;        // pressionado mas talvez sem ter movido (ainda não é drag)
+    let dragging = false;    // realmente arrastando (passou do threshold)
+    let downClient = null;   // ponto inicial em coords do cliente
+    let dragStart = null;    // ponto inicial em coords do mundo
+    let initialPositions = null;
+    const THRESHOLD = 4; // px
 
     c.on('pointerdown', (e) => {
       if (ATT.state.tool !== 'select') return;
-      ATT._consumedAt = performance.now();
-      if (e.button === 2){ // botão direito abre modal
+      if (e.button === 2){
         ATT.ui.openTokenModal(t.id);
         e.stopPropagation();
         return;
       }
-      // Se não estava selecionado: shift adiciona, senão substitui
       const sel = ATT.state.selection;
       if (e.shiftKey){
         if (sel.has(t.id)) sel.delete(t.id); else sel.add(t.id);
@@ -211,12 +220,13 @@ ATT.tokens = {
       }
       ATT.emit('selection:changed');
 
-      dragging = true;
+      down = true; dragging = false;
+      downClient = { x: e.clientX, y: e.clientY };
       const p = e.getLocalPosition(ATT.app.world);
       dragStart = { x: p.x, y: p.y };
       initialPositions = new Map();
       for (const id of sel){
-        const tt = ATT.state.tokens.find(x => x.id === id);
+        const tt = ATT.tokens.get(id);
         if (tt) initialPositions.set(id, { x: tt.x, y: tt.y });
       }
       c.cursor = 'grabbing';
@@ -224,28 +234,53 @@ ATT.tokens = {
     });
 
     const move = (e) => {
-      if (!dragging) return;
+      if (!down) return;
+      const dxs = e.clientX - downClient.x, dys = e.clientY - downClient.y;
+      if (!dragging){
+        if (Math.hypot(dxs, dys) < THRESHOLD) return;
+        dragging = true;
+        // visual: escala + traz pra frente
+        for (const id of ATT.state.selection){
+          const cc = ATT.tokens.byId.get(id);
+          if (cc){ cc.scale.set(1.06); cc.zIndex = 100; }
+        }
+      }
+      // movimento livre — sem snap durante o arrasto
       const r = ATT.app.pixi.view.getBoundingClientRect();
       const p = ATT.app.screenToWorld(e.clientX - r.left, e.clientY - r.top);
       const dx = p.x - dragStart.x;
       const dy = p.y - dragStart.y;
       for (const id of ATT.state.selection){
-        const tt = ATT.state.tokens.find(x => x.id === id);
+        const tt = ATT.tokens.get(id);
         const init = initialPositions.get(id);
         if (!tt || !init) continue;
-        let nx = init.x + dx, ny = init.y + dy;
-        const snap = ATT.grid.snap(nx, ny);
-        tt.x = snap.x; tt.y = snap.y;
+        tt.x = init.x + dx;
+        tt.y = init.y + dy;
         const cc = ATT.tokens.byId.get(id);
         if (cc) cc.position.set(tt.x, tt.y);
       }
       ATT.emit('vision:changed');
     };
-    const up = () => {
-      if (!dragging) return;
-      dragging = false; c.cursor = 'grab';
+
+    const up = (e) => {
+      if (!down) return;
+      const wasDragging = dragging;
+      down = false; dragging = false; c.cursor = 'grab';
+      if (wasDragging){
+        const useSnap = ATT.state.grid.snap && !(e && e.altKey);
+        for (const id of ATT.state.selection){
+          const tt = ATT.tokens.get(id); if (!tt) continue;
+          if (useSnap){ const s = ATT.grid.snap(tt.x, tt.y); tt.x = s.x; tt.y = s.y; }
+          const cc = ATT.tokens.byId.get(id);
+          if (cc){ cc.scale.set(1); cc.zIndex = 0; cc.position.set(tt.x, tt.y); }
+        }
+        ATT.emit('vision:changed');
+        ATT.emit('tokens:changed');
+      }
+      initialPositions = null;
     };
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
   },
 };

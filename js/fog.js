@@ -1,15 +1,21 @@
-// Fog of war:
-//   - revealRT (RenderTexture): máscara persistente do que o mestre revelou manualmente
-//   - fogRT  (RenderTexture):  recomposta a cada mudança; preto sobre o mapa, com buracos onde
-//     há (a) revelação manual ou (b) polígono de visibilidade dinâmica.
+// Fog of war com luz suave (radial gradient + máscara de polígono de visibilidade).
+//
+// Pipeline:
+//   1) lightsRT   ← desenha o gradiente de cada luz (mascarado pelo polígono LOS)
+//   2) fogRT      ← preto (alpha=darkness) + ERASE com revealRT + ERASE com lightsRT
+//   3) fogSprite  exibe fogRT acima da cena
+//
+// Resultado: fade homogêneo (Owlbear/Roll20-like), bloqueio por paredes/portas,
+// múltiplas luzes somam contribuição (overlap fica mais brilhante).
 ATT.fog = {
-  fogRT: null,
-  revealRT: null,
-  fogSprite: null,    // sprite que exibe fogRT
-  revealSprite: null, // sprite que exibe revealRT (cache, usado para erase)
-  rtScale: 1,         // escala usada se mapa for muito grande
+  fogRT: null, revealRT: null, lightsRT: null,
+  fogSprite: null,
+  rtScale: 1,
+  gradTexture: null,
+  GRAD_SIZE: 512,
 
   init(){
+    this._buildGradient();
     ATT.on('map:changed', () => this._build());
     ATT.on('vision:changed', () => this.refresh());
     ATT.on('view:changed', () => this.refresh());
@@ -20,6 +26,26 @@ ATT.fog = {
     this._installPainter();
   },
 
+  // Gradiente radial branco com alpha que cai suavemente do centro até a borda.
+  // Quando usado como ERASE sobre o fog preto, cria um pool de luz com falloff homogêneo.
+  _buildGradient(){
+    const S = this.GRAD_SIZE;
+    const c = document.createElement('canvas');
+    c.width = c.height = S;
+    const ctx = c.getContext('2d');
+    const grad = ctx.createRadialGradient(S/2, S/2, 0, S/2, S/2, S/2);
+    // Curva inspirada no Owlbear: centro brilhante, cai suave, borda quase 0
+    grad.addColorStop(0.00, 'rgba(255,255,255,1.00)');
+    grad.addColorStop(0.35, 'rgba(255,255,255,0.96)');
+    grad.addColorStop(0.55, 'rgba(255,255,255,0.82)');
+    grad.addColorStop(0.72, 'rgba(255,255,255,0.55)');
+    grad.addColorStop(0.86, 'rgba(255,255,255,0.25)');
+    grad.addColorStop(1.00, 'rgba(255,255,255,0.00)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, S, S);
+    this.gradTexture = PIXI.Texture.from(c);
+  },
+
   _build(){
     const m = ATT.state.map;
     const MAX = 4096;
@@ -28,8 +54,10 @@ ATT.fog = {
     const h = Math.ceil(m.height * this.rtScale);
     if (this.revealRT) this.revealRT.destroy(true);
     if (this.fogRT)    this.fogRT.destroy(true);
+    if (this.lightsRT) this.lightsRT.destroy(true);
     this.revealRT = PIXI.RenderTexture.create({ width: w, height: h, resolution: 1 });
     this.fogRT    = PIXI.RenderTexture.create({ width: w, height: h, resolution: 1 });
+    this.lightsRT = PIXI.RenderTexture.create({ width: w, height: h, resolution: 1 });
 
     if (!this.fogSprite){
       this.fogSprite = new PIXI.Sprite(this.fogRT);
@@ -37,23 +65,18 @@ ATT.fog = {
     } else { this.fogSprite.texture = this.fogRT; }
     this.fogSprite.scale.set(1 / this.rtScale);
 
-    if (!this.revealSprite) this.revealSprite = new PIXI.Sprite(this.revealRT);
-    else this.revealSprite.texture = this.revealRT;
-
     this.refresh();
   },
 
-  // Pinta na máscara persistente (revelar/esconder em raio)
   paintReveal(wx, wy, radius, mode = 'reveal'){
     const g = new PIXI.Graphics();
     if (mode === 'reveal'){
       g.beginFill(0xffffff, 1).drawCircle(wx * this.rtScale, wy * this.rtScale, radius * this.rtScale).endFill();
-      ATT.app.pixi.renderer.render(g, { renderTexture: this.revealRT, clear: false });
     } else {
       g.blendMode = PIXI.BLEND_MODES.ERASE;
       g.beginFill(0xffffff, 1).drawCircle(wx * this.rtScale, wy * this.rtScale, radius * this.rtScale).endFill();
-      ATT.app.pixi.renderer.render(g, { renderTexture: this.revealRT, clear: false });
     }
+    ATT.app.pixi.renderer.render(g, { renderTexture: this.revealRT, clear: false });
     g.destroy();
     this.refresh();
   },
@@ -72,52 +95,75 @@ ATT.fog = {
     this.refresh();
   },
 
-  // Recomputa a máscara final a partir de:
-  //   1) preto cobrindo o mapa
-  //   2) ERASE com revelações persistentes
-  //   3) ERASE com polígonos de visibilidade (lanternas em tokens + luzes)
   refresh(){
-    if (!this.fogRT) return;
+    if (this._scheduled) return;
+    this._scheduled = true;
+    requestAnimationFrame(() => { this._scheduled = false; this._doRefresh(); });
+  },
+
+  _doRefresh(){
+    if (!this.fogRT || !this.gradTexture) return;
     const m = ATT.state.map;
     const W = m.width * this.rtScale, H = m.height * this.rtScale;
     const renderer = ATT.app.pixi.renderer;
 
-    const compose = new PIXI.Container();
-
-    // Camada base preta. Em modo GM, semi-transparente para ele "ver através".
-    const black = new PIXI.Graphics();
-    const d = ATT.util.clamp(ATT.state.view.darkness ?? 1, 0, 1);
-    const baseAlpha = ATT.state.view.mode === 'gm' ? d * 0.35 : d;
-    black.beginFill(0x000000, baseAlpha).drawRect(0, 0, W, H).endFill();
-    compose.addChild(black);
-
-    // ERASE com a máscara persistente (revelações manuais)
-    const revealCopy = new PIXI.Sprite(this.revealRT);
-    revealCopy.blendMode = PIXI.BLEND_MODES.ERASE;
-    compose.addChild(revealCopy);
-
-    // ERASE com polígonos de visibilidade (lights + tokens com lanterna)
-    const visG = new PIXI.Graphics();
-    visG.blendMode = PIXI.BLEND_MODES.ERASE;
-    visG.beginFill(0xffffff, 1);
+    // ── 1) Renderiza todas as luzes em lightsRT (gradientes + máscara LOS)
+    const lightsCompose = new PIXI.Container();
+    const baseR = this.GRAD_SIZE / 2;
     const cellPx = ATT.state.grid.size;
+
+    const pushLight = (x, y, radius, intensity) => {
+      const poly = ATT.lights.visibilityPolygon(x, y, radius);
+      if (poly.length < 6) return;
+      // máscara de polígono LOS (em coords do RT)
+      const polyG = new PIXI.Graphics();
+      const flat = poly.map(v => v * this.rtScale);
+      polyG.beginFill(0xffffff, 1).drawPolygon(flat).endFill();
+      // sprite do gradiente
+      const sprite = new PIXI.Sprite(this.gradTexture);
+      sprite.anchor.set(0.5);
+      sprite.position.set(x * this.rtScale, y * this.rtScale);
+      const s = (radius / baseR) * this.rtScale;
+      sprite.scale.set(s);
+      sprite.alpha = ATT.util.clamp(intensity ?? 1, 0, 1);
+      // mascarar com o polígono
+      sprite.mask = polyG;
+      lightsCompose.addChild(polyG);
+      lightsCompose.addChild(sprite);
+    };
 
     for (const l of ATT.state.lights){
       const r = (l.animate && l._flickerR) ? l._flickerR : l.radius;
-      const poly = ATT.lights.visibilityPolygon(l.x, l.y, r);
-      if (poly.length >= 6) visG.drawPolygon(poly.map((v, i) => i % 2 === 0 ? v * this.rtScale : v * this.rtScale));
+      pushLight(l.x, l.y, r, l.intensity);
     }
     for (const t of ATT.state.tokens){
       if (!t.flashlight) continue;
       const r = (t.flashRadius || 6) * cellPx;
-      const poly = ATT.lights.visibilityPolygon(t.x, t.y, r);
-      if (poly.length >= 6) visG.drawPolygon(poly.map((v, i) => i % 2 === 0 ? v * this.rtScale : v * this.rtScale));
+      pushLight(t.x, t.y, r, 1);
     }
-    visG.endFill();
-    compose.addChild(visG);
 
-    renderer.render(compose, { renderTexture: this.fogRT, clear: true });
-    compose.destroy({ children: true });
+    renderer.render(lightsCompose, { renderTexture: this.lightsRT, clear: true });
+    lightsCompose.destroy({ children: true });
+
+    // ── 2) Compõe fog: preto (intensidade) − reveal manual − lightsRT
+    const fogCompose = new PIXI.Container();
+
+    const black = new PIXI.Graphics();
+    const d = ATT.util.clamp(ATT.state.view.darkness ?? 1, 0, 1);
+    const baseAlpha = ATT.state.view.mode === 'gm' ? d * 0.35 : d;
+    black.beginFill(0x000000, baseAlpha).drawRect(0, 0, W, H).endFill();
+    fogCompose.addChild(black);
+
+    const revealCopy = new PIXI.Sprite(this.revealRT);
+    revealCopy.blendMode = PIXI.BLEND_MODES.ERASE;
+    fogCompose.addChild(revealCopy);
+
+    const lightsCopy = new PIXI.Sprite(this.lightsRT);
+    lightsCopy.blendMode = PIXI.BLEND_MODES.ERASE;
+    fogCompose.addChild(lightsCopy);
+
+    renderer.render(fogCompose, { renderTexture: this.fogRT, clear: true });
+    fogCompose.destroy({ children: true });
   },
 
   _installPainter(){
